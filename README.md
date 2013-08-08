@@ -92,11 +92,13 @@ utilize the following:
 You can use FirebaseIndex in node.js as well:
 
 ```javascript
-   var FirebaseIndex = require('./FirebaseIndex.js').FirebaseIndex;
+   const FirebaseIndex = require('./FirebaseIndex.js').FirebaseIndex;
    var index = new FirebaseIndex( idxRef, dataRef );
 ```
 
 ## Installation
+
+Web Client:
 
 ```
    <!-- optional, makes async ops faster -->
@@ -105,6 +107,15 @@ You can use FirebaseIndex in node.js as well:
    <!-- required -->
    <script type="text/javascript" src="http://static.firebase.com/v0/firebase.js"></script>
    <script type="text/javascript" src="FirebaseIndex.js"></script>
+```
+
+Node.js (requires Firebase and [JQDeferred](https://github.com/jaubourg/jquery-deferred-for-node)):
+
+```
+   cd FirebaseIndex/
+   npm install
+   node ./nodejs-demo.js
+   # manipulate the web page and watch the changes come in
 ```
 
 ## API

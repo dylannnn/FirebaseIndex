@@ -11,7 +11,7 @@ jQuery(function ($) {
     */
 
    // initialize our indexed data
-   var FB      = new Firebase('https://i5ubv072aza.firebaseio-demo.com/');
+   var FB      = new Firebase('https://katowulf-firebaseindex.firebaseio-demo.com/');
    var IDX     = new FirebaseIndex(FB.child('index'), FB.child('widgets'));
 
    // refs for our DOM nodes
@@ -28,7 +28,7 @@ jQuery(function ($) {
    // DOM event handlers
    $master.on('click', 'li', addToIndex);
    $index.on('click', 'i.icon-remove-sign', removeFromIndex);
-   $index.on('change', 'input', resortIndex);
+   $index.on('keyup change', 'input', resortIndex);
    $('#reset').on('click', resetData);
 
 
@@ -76,7 +76,7 @@ jQuery(function ($) {
    }
 
    function addToIndex(e) {
-      var $el = $(e.target);
+      var $el = $(e.currentTarget);
       if( !$el.hasClass('picked') ) {
          IDX.add($el.attr('data-id'));
       }
@@ -87,14 +87,18 @@ jQuery(function ($) {
    }
 
    function resortIndex(e) {
-      var $arrow = $(e.target), $el = $arrow.closest('li'), id = $el.attr('data-id'), pri = $el.find('input').val();
-      if( parseInt(pri) == pri ) {
-         IDX.add(id, pri? parseInt(pri) : null);
+      var $arrow = $(e.target),
+         $el = $arrow.closest('li'),
+         id = $el.attr('data-id'),
+         $inp = $el.find('input'),
+         pri = $inp.val();
+      if( pri === '' ) { pri = 0; }
+      if( parseInt(pri, 10) != pri ) {
+         $inp.val($inp.val().replace(/\D/g, '')||null);
+         alert('must be an integer for this demo');
       }
-      else {
-         alert('must be a number for this demo');
-         $el.find('input').val(null);
-      }
+      IDX.add(id, pri || pri === 0? parseInt(pri, 10) : null);
+      $inp.focus();
    }
 
    /*****************************************

@@ -1,10 +1,21 @@
 /*! FirebaseIndex
- *
+ * @version 0.0.4
+ * https://github.com/Zenovations/FirebaseIndex
  *************************************/
 var FirebaseIndex;
-(function ($, exports) { // jQuery isn't required, but it helps with async ops
+(function (jQuery, exports) { // jQuery isn't required, but it helps with async ops
    "use strict";
-   var undefined;
+   var undefined, Deferred;
+
+   if( jQuery ) {
+      Deferred = jQuery.Deferred;
+   }
+   else if( typeof(require) === 'function' ) {
+      Deferred = require( "JQDeferred" );
+   }
+   else {
+      throw new Error('Must include jQuery for web client, or install JQDeferred for node.js!');
+   }
 
    function FirebaseIndex(indexRef, dataRef) {
       this.indexRef = indexRef;
@@ -261,15 +272,9 @@ var FirebaseIndex;
          if( ref ) {
             // since we could have records waiting on which doesn't exist before they load in, we need to
             // deal with that case here by resolving any waiting methods
-            if( ref.def ) {
-               if( ref.def.state() === 'pending' ) {
-                  reassignPrevId(this.childRefs, ref);
-                  ref.def.resolve();
-               }
-            }
-            else if( ref.loaded === false ) {
+            if( ref.def.state() === 'pending' ) {
                reassignPrevId(this.childRefs, ref);
-               ref.loaded = true;
+               ref.def.resolve();
             }
 
             // notify listeners record was removed
@@ -290,7 +295,7 @@ var FirebaseIndex;
             waitFor(this.childRefs, prevId, function() {
                notifyListeners(this.eventListeners['child_added'], ss, ref);
                ref.loaded = true;
-               ref.def && ref.def.resolve();
+               ref.def.resolve();
             }.bind(this));
          }
          else {
@@ -362,7 +367,7 @@ var FirebaseIndex;
       list[key] = {
          prevId: prevId,
          loaded: false,
-         def: $? $.Deferred() : null,
+         def: Deferred(),
          ref: childRef,
          dataSub: null,
          key: key,
@@ -392,15 +397,9 @@ var FirebaseIndex;
       if( !id || !ref || ref.loaded ) {
          callback();
       }
-      else if( ref.def ) {
+      else {
          // use jQuery deferred if it exists (fast and efficient)
          ref.def.done(callback);
-      }
-      else {
-         // do it the old fashioned way :(
-         setTimeout(function() {
-            waitFor(refs, id, callback);
-         }, 10);
       }
    }
 
@@ -509,4 +508,4 @@ var FirebaseIndex;
 
    exports.FirebaseIndex = FirebaseIndex;
 
-})(jQuery, typeof(exports) === 'object' && exports? exports : window);
+})(typeof(jQuery) !== 'undefined'? jQuery : null, typeof(exports) !== 'undefined' && exports? exports : window);
