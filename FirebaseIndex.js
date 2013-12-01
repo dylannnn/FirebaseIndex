@@ -3,23 +3,13 @@
  * https://github.com/Zenovations/FirebaseIndex
  *************************************/
 var FirebaseIndex;
-(function (jQuery, exports) { // jQuery isn't required, but it helps with async ops
+(function ($, exports) { // jQuery isn't required, but it helps with async ops
    "use strict";
-   var undefined, Deferred;
-
-   if( jQuery ) {
-      Deferred = jQuery.Deferred;
-   }
-   else if( typeof(require) === 'function' ) {
-      Deferred = require( "JQDeferred" );
-   }
-   else {
-      throw new Error('Must include jQuery for web client, or install JQDeferred for node.js!');
-   }
+   var undefined;
 
    function FirebaseIndex(indexRef, dataRef) {
       this.indexRef = indexRef;
-      this.dataRef = typeof(dataRef) === 'function'? dataRef : function(key) { return dataRef.child(key); };
+      this.dataRef = typeof(dataRef) === 'function'? dataRef : function(key) { return dataRef.ref().child(key); };
       this._initMemberVars();
    }
 
@@ -105,6 +95,15 @@ var FirebaseIndex;
             throw new Error('I cannot process this event type: '+eventType);
       }
       return fn;
+   };
+
+   /**
+    * Retrieves a reference to the data record indexed at this key
+    * @param {string} key
+    * @returns {Firebase}
+    */
+   FirebaseIndex.prototype.child = function(key) {
+      return this.dataRef(key);
    };
 
    /**
@@ -223,7 +222,7 @@ var FirebaseIndex;
    FirebaseIndex.prototype._indexAdded = function(ss, prevId) {
       storeChildRef(this.childRefs, this._childChanged, ss, prevId);
       // monitor the record for changes and defer the handling to this._childChanged
-      var ref = this.dataRef(ss.name());
+      var ref = this.dataRef(ss.name(), ss);
       var fn = ref.on('value', this._childChanged.bind(this, ss.name()));
       this.childRefs[ss.name()].dataSub = {
          dispose: function() { ref.off('value', fn); }
@@ -272,9 +271,15 @@ var FirebaseIndex;
          if( ref ) {
             // since we could have records waiting on which doesn't exist before they load in, we need to
             // deal with that case here by resolving any waiting methods
-            if( ref.def.state() === 'pending' ) {
+            if( ref.def ) {
+               if( ref.def.state() === 'pending' ) {
+                  reassignPrevId(this.childRefs, ref);
+                  ref.def.resolve();
+               }
+            }
+            else if( ref.loaded === false ) {
                reassignPrevId(this.childRefs, ref);
-               ref.def.resolve();
+               ref.loaded = true;
             }
 
             // notify listeners record was removed
@@ -295,7 +300,7 @@ var FirebaseIndex;
             waitFor(this.childRefs, prevId, function() {
                notifyListeners(this.eventListeners['child_added'], ss, ref);
                ref.loaded = true;
-               ref.def.resolve();
+               ref.def && ref.def.resolve();
             }.bind(this));
          }
          else {
@@ -322,8 +327,7 @@ var FirebaseIndex;
 
    inheritsPrototype(FirebaseIndexQuery, FirebaseIndex, {
       add: function() { throw new Error('cannot add to index on read-only FirebaseIndexQueue instance (after calling limit, endAt, or startAt)'); },
-      drop: function() { throw new Error('cannot drop from index on read-only FirebaseIndexQueue instance (after calling limit, endAt, or startAt)'); },
-      child: function() { throw new Error('cannot access child on read-only FirebaseIndexQueue instance (after calling limit, endAt, or startAt)'); }
+      drop: function() { throw new Error('cannot drop from index on read-only FirebaseIndexQueue instance (after calling limit, endAt, or startAt)'); }
    });
 
    function notifyListeners(list, ss, ref) {
@@ -367,7 +371,7 @@ var FirebaseIndex;
       list[key] = {
          prevId: prevId,
          loaded: false,
-         def: Deferred(),
+         def: $? $.Deferred() : null,
          ref: childRef,
          dataSub: null,
          key: key,
@@ -397,9 +401,15 @@ var FirebaseIndex;
       if( !id || !ref || ref.loaded ) {
          callback();
       }
-      else {
+      else if( ref.def ) {
          // use jQuery deferred if it exists (fast and efficient)
          ref.def.done(callback);
+      }
+      else {
+         // do it the old fashioned way :(
+         setTimeout(function() {
+            waitFor(refs, id, callback);
+         }, 10);
       }
    }
 
@@ -508,4 +518,4 @@ var FirebaseIndex;
 
    exports.FirebaseIndex = FirebaseIndex;
 
-})(typeof(jQuery) !== 'undefined'? jQuery : null, typeof(exports) !== 'undefined' && exports? exports : window);
+})(typeof(jQuery) !== 'undefined'? jQuery : null, typeof(exports) === 'object' && exports? exports : window);
