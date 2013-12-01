@@ -181,9 +181,11 @@ var FirebaseIndex;
     * be created to perform any further ops.
     */
    FirebaseIndex.prototype.dispose = function() {
-      this.childRefs.forEach(function(o) {
-         o.dispose();
-      });
+      for (var key in this.childRefs) {
+         if (this.childRefs.hasOwnProperty(key)) {
+            this.childRefs[key].dispose();
+         }
+      }
       this.indexRef.off('child_added', this._indexAdded);
       this.indexRef.off('child_removed', this._indexRemoved);
       this.indexRef.off('child_moved', this._indexMoved);
